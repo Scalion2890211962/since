@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>意识晶体 - Sentient Crystal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a1a, #1a1a3a, #0a0a2a);
+            min-height: 100vh;
+            color: #e0e0ff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(90deg, #88ccff, #aa88ff, #cc88ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(136, 204, 255, 0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #88aaff;
+            font-size: 1.2rem;
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+        /* 晶体展示区 */
+        .crystal-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+
+        .crystal-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crystal {
+            width: 180px;
+            height: 250px;
+            background: linear-gradient(
+                135deg, 
+                rgba(136, 204, 255, 0.1), 
+                rgba(170, 136, 255, 0.3), 
+                rgba(204, 136, 255, 0.1)
+            );
+            clip-path: polygon(
+                50% 0%, 
+                80% 20%, 
+                100% 50%, 
+                80% 80%, 
+                50% 100%, 
+                20% 80%, 
+                0% 50%, 
+                20% 20%
+            );
+            border: 1px solid rgba(200, 200, 255, 0.5);
+            box-shadow: 
+                0 0 30px rgba(136, 204, 255, 0.5),
+                inset 0 0 20px rgba(170, 136, 255, 0.3);
+            position: relative;
+            animation: crystalPulse 4s infinite ease-in-out;
+        }
+
+        /* 晶格振动效果 */
+        .crystal::before {
+            content: '';
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            right: 5%;
+            bottom: 5%;
+            background: linear-gradient(
+                45deg, 
+                transparent, 
+                rgba(204, 136, 255, 0.2), 
+                transparent
+            );
+            clip-path: inherit;
+            animation: latticeVibration 2s infinite linear;
+        }
+
+        /* 意识波谱展示 */
+        .data-panel {
+            width: 500px;
+            height: 400px;
+            background: rgba(10, 10, 40, 0.7);
+            border: 1px solid rgba(136, 204, 255, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(136, 204, 255, 0.2);
+        }
+
+        .panel-title {
+            color: #88ccff;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(136, 204, 255, 0.3);
+            padding-bottom: 0.5rem;
+        }
+
+        .waveform {
+            width: 100%;
+            height: 180px;
+            position: relative;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .wave {
+            position: absolute;
+            width: 100%;
+            height: 40px;
+            border-radius: 20px;
+            background: linear-gradient(90deg, #88ccff, #aa88ff);
+            opacity: 0.6;
+            animation: waveMotion 3s infinite ease-in-out;
+            transform-origin: center;
+        }
+
+        .wave:nth-child(1) { top: 20px; animation-delay: 0s; }
+        .wave:nth-child(2) { top: 80px; animation-delay: 0.5s; }
+        .wave:nth-child(3) { top: 140px; animation-delay: 1s; }
+
+        .status-display {
+            margin-top: 1rem;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .status-item {
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-label {
+            color: #aaccff;
+        }
+
+        .status-value {
+            color: #cc88ff;
+            font-weight: 500;
+        }
+
+        /* 控制区 */
+        .control-section {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.8rem 2rem;
+            background: linear-gradient(90deg, #1a3a6a, #2a4a8a);
+            border: 1px solid rgba(136, 204, 255, 0.5);
+            border-radius: 5px;
+            color: #e0e0ff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(136, 204, 255, 0.2);
+        }
+
+        .btn:hover {
+            background: linear-gradient(90deg, #2a4a8a, #3a5a9a);
+            box-shadow: 0 0 15px rgba(136, 204, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.active {
+            background: linear-gradient(90deg, #88ccff, #aa88ff);
+            border-color: #cc88ff;
+        }
+
+        /* 动画定义 */
+        @keyframes crystalPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(136, 204, 255, 0.5), inset 0 0 20px rgba(170, 136, 255, 0.3); }
+            50% { transform: scale(1.02); box-shadow: 0 0 40px rgba(136, 204, 255, 0.7), inset 0 0 25px rgba(170, 136, 255, 0.5); }
+        }
+
+        @keyframes latticeVibration {
+            0% { transform: rotate(0deg) scale(0.98); opacity: 0.2; }
+            25% { transform: rotate(1deg) scale(1); opacity: 0.4; }
+            50% { transform: rotate(0deg) scale(1.02); opacity: 0.6; }
+            75% { transform: rotate(-1deg) scale(1); opacity: 0.4; }
+            100% { transform: rotate(0deg) scale(0.98); opacity: 0.2; }
+        }
+
+        @keyframes waveMotion {
+            0%, 100% { transform: scaleX(0.8) scaleY(0.9); opacity: 0.5; }
+            50% { transform: scaleX(1.2) scaleY(1.1); opacity: 0.8; }
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 900px) {
+            .crystal-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            .data-panel {
+                width: 90%;
+                max-width: 500px;
+            }
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>意识晶体 (Sentient Crystal)</h1>
+            <p class="subtitle">硅基生命体意识存储介质 | 晶格振动编码 · 脑机共振读取</p>
+        </header>
+
+        <section class="crystal-section">
+            <!-- 意识晶体可视化 -->
+            <div class="crystal-container">
+                <div class="crystal" id="sentientCrystal"></div>
+            </div>
+
+            <!-- 数据面板 -->
+            <div class="data-panel">
+                <h2 class="panel-title">意识波谱分析</h2>
+                <div class="waveform">
+                    <div class="wave"></div>
+                    <div class="wave"></div>
+                    <div class="wave"></div>
+                </div>
+                <div class="status-display">
+                    <div class="status-item">
+                        <span class="status-label">晶格振动频率：</span>
+                        <span class="status-value" id="frequency">12.8 THz</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">意识编码进度：</span>
+                        <span class="status-value" id="progress">0%</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">脑机共振状态：</span>
+                        <span class="status-value" id="resonance">未连接</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">存储容量使用：</span>
+                        <span class="status-value">0 / 1000 PB</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 控制按钮区 -->
+        <section class="control-section">
+            <button class="btn" id="loadKnowledge">加载文明知识库</button>
+            <button class="btn" id="connectBrain">启动脑机共振</button>
+            <button class="btn" id="resetCrystal">重置意识晶体</button>
+        </section>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const frequencyEl = document.getElementById('frequency');
+        const progressEl = document.getElementById('progress');
+        const resonanceEl = document.getElementById('resonance');
+        const loadBtn = document.getElementById('loadKnowledge');
+        const connectBtn = document.getElementById('connectBrain');
+        const resetBtn = document.getElementById('resetCrystal');
+        const crystal = document.getElementById('sentientCrystal');
+
+        // 晶格振动频率随机波动
+        function updateFrequency() {
+            const baseFreq = 12.8;
+            const randomVariation = (Math.random() - 0.5) * 0.4;
+            const newFreq = (baseFreq + randomVariation).toFixed(1);
+            frequencyEl.textContent = `${newFreq} THz`;
+        }
+
+        // 定时更新频率
+        let freqInterval;
+        
+        // 加载知识库动画
+        function loadKnowledgeBase() {
+            loadBtn.disabled = true;
+            loadBtn.classList.add('active');
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+                    loadBtn.disabled = false;
+                    loadBtn.classList.remove('active');
+                    alert('文明知识库已完整加载到意识晶体！');
+                }
+                progressEl.textContent = `${Math.round(progress)}%`;
+            }, 200);
+        }
+
+        // 脑机共振连接
+        function connectBrainResonance() {
+            if (resonanceEl.textContent === '未连接') {
+                connectBtn.classList.add('active');
+                resonanceEl.textContent = '连接中...';
+                resonanceEl.style.color = '#aaff88';
+                
+                setTimeout(() => {
+                    resonanceEl.textContent = '已共振 (89.7%)';
+                    // 增强晶体动画效果
+                    crystal.style.animation = 'crystalPulse 2s infinite ease-in-out';
+                    // 启动频率更新
+                    freqInterval = setInterval(updateFrequency, 500);
+                }, 1500);
+            } else {
+                disconnectResonance();
+            }
+        }
+
+        // 断开脑机共振
+        function disconnectResonance() {
+            connectBtn.classList.remove('active');
+            resonanceEl.textContent = '未连接';
+            resonanceEl.style.color = '#cc88ff';
+            crystal.style.animation = 'crystalPulse 4s infinite ease-in-out';
+            clearInterval(freqInterval);
+            frequencyEl.textContent = '12.8 THz';
+        }
+
+        // 重置晶体
+        function resetCrystal() {
+            disconnectResonance();
+            progressEl.textContent = '0%';
+            loadBtn.classList.remove('active');
+            loadBtn.disabled = false;
+        }
+
+        // 绑定事件监听
+        loadBtn.addEventListener('click', loadKnowledgeBase);
+        connectBtn.addEventListener('click', connectBrainResonance);
+        resetBtn.addEventListener('click', resetCrystal);
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            // 添加页面加载动画效果
+            crystal.style.opacity = '0';
+            crystal.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+                crystal.style.transition = 'all 1s ease';
+                crystal.style.opacity = '1';
+                crystal.style.transform = 'scale(1)';
+            }, 300);
+        });
+    </script>
+</body>
+</html>
