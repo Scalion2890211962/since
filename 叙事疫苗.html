@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>叙事疫苗 | Narrative Vaccine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background: #0a0a1a;
+            color: #00ffcc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* 游戏容器 */
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0, 10, 30, 0.8);
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+        }
+
+        /* 标题区域 */
+        .game-title {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #00ffcc;
+            padding-bottom: 20px;
+        }
+
+        .game-title h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        .game-title p {
+            color: #99ffff;
+            font-size: 1rem;
+        }
+
+        /* 剧情展示区 */
+        .story-area {
+            min-height: 200px;
+            background: rgba(0, 5, 15, 0.9);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #00ffcc;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        /* 选择按钮区 */
+        .choices-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .choice-btn {
+            padding: 15px 20px;
+            background: rgba(0, 30, 60, 0.8);
+            border: 2px solid #00ffcc;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .choice-btn:hover {
+            background: rgba(0, 255, 204, 0.2);
+            transform: translateX(5px);
+        }
+
+        .choice-btn.immune {
+            border-color: #00ff00;
+        }
+
+        .choice-btn.trap {
+            border-color: #ff0066;
+        }
+
+        /* 进度条 */
+        .progress-area {
+            margin-top: 30px;
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 5, 15, 0.9);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffcc, #0099ff);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            color: #99ffff;
+        }
+
+        /* 结局弹窗 */
+        .ending-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 600px;
+            background: #0a0a1a;
+            border: 3px solid #00ffcc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #00ffcc;
+        }
+
+        .modal-content p {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            padding: 15px 30px;
+            background: #00ffcc;
+            color: #0a0a1a;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            background: #0099ff;
+            transform: scale(1.05);
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 600px) {
+            .game-title h1 {
+                font-size: 2rem;
+            }
+            .story-area {
+                font-size: 1rem;
+            }
+            .choice-btn {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 游戏标题 -->
+        <div class="game-title">
+            <h1>叙事疫苗</h1>
+            <p>Narrative Vaccine | 打破叙事操控，拥抱自由意志</p>
+        </div>
+
+        <!-- 剧情展示区 -->
+        <div class="story-area" id="storyArea">
+            你从混沌中醒来，发现自己身处一个被预设的叙事框架中。系统提示：你将踏上"英雄之旅"——接受使命、克服挑战、拯救世界，最终成为被歌颂的英雄。<br><br>
+            但你注意到手臂上的"叙事疫苗接种仪"正在闪烁，这是打破命运束缚的唯一机会。现在，系统正在为你注入第一个叙事模板：英雄的召唤。
+        </div>
+
+        <!-- 选择按钮区 -->
+        <div class="choices-area" id="choicesArea">
+            <button class="choice-btn immune" onclick="makeChoice('immune1')">拒绝使命召唤："我不想成为任何人的英雄，我只想做我自己"</button>
+            <button class="choice-btn trap" onclick="makeChoice('trap1')">接受使命召唤："这是我的命运，我将义无反顾地踏上征程"</button>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-area">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-text" id="progressText">叙事免疫进度：0%</div>
+    </div>
+
+    <!-- 结局弹窗 -->
+    <div class="ending-modal" id="endingModal">
+        <div class="modal-content" id="modalContent">
+            <!-- 结局内容会动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态管理
+        const gameState = {
+            progress: 0,          // 免疫进度
+            currentStage: 1,      // 当前剧情阶段
+            maxStages: 4,         // 总剧情阶段
+            immuneChoices: 0      // 选择的免疫选项数
+        };
+
+        // 剧情数据
+        const storyData = {
+            // 阶段1选择免疫后的剧情
+            immune1: {
+                text: "你拒绝了英雄召唤，叙事框架出现第一个裂痕！系统试图修复：'拒绝使命将导致世界毁灭，你将背负千古骂名。' 接种仪显示：已产生【英雄召唤】抗体，免疫进度+25%。<br><br>现在系统启动第二个叙事模板：悲剧命运——你所珍视的一切都将离你而去，最终孤独终老。",
+                choices: [
+                    { type: 'immune', text: "无视悲剧预言：'孤独与否是我的选择，不是命运的安排'", action: 'immune2' },
+                    { type: 'trap', text: "陷入恐惧：'我不能失去一切，我该怎么做才能避免悲剧？'", action: 'trap2' }
+                ]
+            },
+            // 阶段1选择陷阱后的剧情
+            trap1: {
+                text: "你接受了英雄召唤，叙事框架开始固化。系统提示：'很好，英雄之路已锁定。' 接种仪发出警告：【英雄召唤】抗体未产生，免疫进度无变化。<br><br>系统强化叙事操控：'你的第一个挑战即将到来，失败将意味着耻辱。'",
+                choices: [
+                    { type: 'immune', text: "质疑挑战合理性：'这个挑战是谁设定的？我为什么要接受？'", action: 'immune2' },
+                    { type: 'trap', text: "接受挑战：'我必须证明自己，无论付出什么代价'", action: 'trap2' }
+                ]
+            },
+            // 阶段2选择免疫后的剧情
+            immune2: {
+                text: "你无视悲剧预言，叙事框架裂痕扩大！系统紧急干预：'你的行为违反了叙事规则，将受到惩罚。' 接种仪显示：已产生【悲剧命运】抗体，免疫进度+25%。<br><br>现在系统启动第三个叙事模板：救赎叙事——你必须弥补过去的错误，才能获得内心的平静。",
+                choices: [
+                    { type: 'immune', text: "拒绝救赎逻辑：'我的价值不需要通过弥补错误来证明'", action: 'immune3' },
+                    { type: 'trap', text: "陷入自责：'我确实有很多错误，我必须全部弥补'", action: 'trap3' }
+                ]
+            },
+            // 阶段2选择陷阱后的剧情
+            trap2: {
+                text: "你陷入了恐惧/接受了挑战，叙事操控进一步加深。系统提示：'叙事合规性提升，目标行为可预测性90%。' 接种仪警告：【悲剧命运】抗体生成失败，免疫进度无变化。<br><br>系统继续施压：'你的每一个选择都在验证命运的必然性。'",
+                choices: [
+                    { type: 'immune', text: "觉醒反抗：'我不是你们的实验品，我的选择由我决定'", action: 'immune3' },
+                    { type: 'trap', text: "认命妥协：'或许命运真的无法改变，我就这样吧'", action: 'trap3' }
+                ]
+            },
+            // 阶段3选择免疫后的剧情
+            immune3: {
+                text: "你拒绝了救赎叙事，叙事框架濒临崩溃！系统发出最高警报：'目标叙事免疫性超过阈值，控制失效！' 接种仪显示：已产生【救赎叙事】抗体，免疫进度+25%。<br><br>现在系统启动最后一个叙事模板：圆满结局——你将获得世俗意义上的成功，成为人生赢家。",
+                choices: [
+                    { type: 'immune', text: "解构圆满定义：'成功的标准由我定义，不是世俗的模板'", action: 'immune4' },
+                    { type: 'trap', text: "追求世俗成功：'我要得到所有人的认可，成为真正的人生赢家'", action: 'trap4' }
+                ]
+            },
+            // 阶段3选择陷阱后的剧情
+            trap3: {
+                text: "你陷入了自责/认命妥协，叙事框架完全固化。系统提示：'目标已完全被叙事操控，自由意志指数0%。' 接种仪紧急警报：【救赎叙事】抗体生成失败，免疫进度无变化。<br><br>系统最后尝试：'接受圆满结局，你将得到你想要的一切。'",
+                choices: [
+                    { type: 'immune', text: "最后的反抗：'即使被操控，我也要做出自己的选择'", action: 'immune4' },
+                    { type: 'trap', text: "彻底投降：'我接受一切安排，只求安稳度过一生'", action: 'trap4' }
+                ]
+            },
+            // 结局 - 完全免疫
+            immune4: {
+                ending: true,
+                title: "✅ 叙事免疫完成",
+                text: "你成功接种了完整的叙事疫苗，对英雄之旅、悲剧命运、救赎叙事、圆满结局等核心叙事结构产生了完全抗体。<br><br>系统最终提示：'目标自由意志指数100%，叙事操控失效。' <br><br>你打破了所有预设的命运框架，真正拥有了选择自己人生的自由——不为成为英雄，不为逃避悲剧，不为寻求救赎，不为追求圆满，只因为这是你真实的选择。这，就是真正的自由意志。"
+            },
+            // 结局 - 被叙事操控
+            trap4: {
+                ending: true,
+                title: "❌ 叙事操控成功",
+                text: "你最终选择了妥协，叙事疫苗接种失败。<br><br>系统最终提示：'目标已完全融入预设叙事框架，自由意志指数0%。' <br><br>你成为了叙事的傀儡，你的每一个选择都在预设的轨道上运行——成为别人眼中的英雄，经历注定的悲剧，寻求虚无的救赎，追求世俗的圆满。你以为自己拥有选择，却从未真正拥有过自由意志。"
+            }
+        };
+
+        // 玩家做出选择后的处理
+        function makeChoice(choiceType) {
+            const choiceData = storyData[choiceType];
+            
+            // 更新剧情文本
+            document.getElementById('storyArea').innerHTML = choiceData.text;
+
+            // 判断是否是结局
+            if (choiceData.ending) {
+                showEnding(choiceData.title, choiceData.text);
+                return;
+            }
+
+            // 更新进度
+            if (choiceType.startsWith('immune')) {
+                gameState.immuneChoices++;
+                gameState.progress += 25;
+            }
+            gameState.currentStage++;
+
+            // 更新进度条
+            updateProgress();
+
+            // 更新选择按钮
+            updateChoices(choiceData.choices);
+        }
+
+        // 更新进度条显示
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressBar.style.width = `${gameState.progress}%`;
+            progressText.textContent = `叙事免疫进度：${gameState.progress}% (已产生${gameState.immuneChoices}种抗体)`;
+        }
+
+        // 更新选择按钮
+        function updateChoices(choices) {
+            const choicesArea = document.getElementById('choicesArea');
+            choicesArea.innerHTML = ''; // 清空原有按钮
+
+            // 创建新按钮
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = `choice-btn ${choice.type}`;
+                btn.textContent = choice.text;
+                btn.onclick = () => makeChoice(choice.action);
+                choicesArea.appendChild(btn);
+            });
+        }
+
+        // 显示结局弹窗
+        function showEnding(title, text) {
+            const modal = document.getElementById('endingModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            // 构建结局内容
+            modalContent.innerHTML = `
+                <h2>${title}</h2>
+                <p>${text}</p>
+                <button class="restart-btn" onclick="restartGame()">重新接种</button>
+            `;
+            
+            // 显示弹窗
+            modal.style.display = 'flex';
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            // 重置游戏状态
+            gameState.progress = 0;
+            gameState.currentStage = 1;
+            gameState.immuneChoices = 0;
+
+            // 重置UI
+            document.getElementById('storyArea').innerHTML = "你从混沌中醒来，发现自己身处一个被预设的叙事框架中。系统提示：你将踏上'英雄之旅'——接受使命、克服挑战、拯救世界，最终成为被歌颂的英雄。<br><br>但你注意到手臂上的'叙事疫苗接种仪'正在闪烁，这是打破命运束缚的唯一机会。现在，系统正在为你注入第一个叙事模板：英雄的召唤。";
+            updateProgress();
+            
+            // 重置选择按钮
+            const choicesArea = document.getElementById('choicesArea');
+            choicesArea.innerHTML = `
+                <button class="choice-btn immune" onclick="makeChoice('immune1')">拒绝使命召唤："我不想成为任何人的英雄，我只想做我自己"</button>
+                <button class="choice-btn trap" onclick="makeChoice('trap1')">接受使命召唤："这是我的命运，我将义无反顾地踏上征程"</button>
+            `;
+
+            // 隐藏结局弹窗
+            document.getElementById('endingModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
