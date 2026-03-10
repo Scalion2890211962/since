@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>维度折纸 (Dimensional Origami)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #64ffda, #81c784, #ba68c8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            border: 2px solid rgba(100, 255, 218, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(100, 255, 218, 0.1);
+        }
+
+        #origamiCanvas {
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 20, 0.8);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 300px;
+            background: rgba(30, 30, 50, 0.6);
+            padding: 25px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 255, 218, 0.2);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group h3 {
+            margin-bottom: 10px;
+            color: #64ffda;
+            font-size: 1.2rem;
+        }
+
+        .dimension-btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #2d3748, #4a5568);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dimension-btn:hover {
+            background: linear-gradient(90deg, #64ffda, #81c784);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(100, 255, 218, 0.3);
+        }
+
+        .dimension-btn.active {
+            background: linear-gradient(90deg, #64ffda, #81c784);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+        }
+
+        .status-panel {
+            background: rgba(20, 20, 40, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(186, 104, 200, 0.3);
+            margin-top: 20px;
+        }
+
+        .status-panel h3 {
+            color: #ba68c8;
+            margin-bottom: 10px;
+        }
+
+        .status-text {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .fold-speed {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .warning {
+            color: #ff6b6b;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>维度折纸 (Dimensional Origami)</h1>
+        <p>通过折叠空间维度本身来改变物体性质的技术。将三维物体折成二维可无限压缩存储；折成四维可实现穿墙；过度折叠则能将物质转化为纯信息态。</p>
+    </div>
+
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="origamiCanvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>维度控制</h3>
+                <button class="dimension-btn active" data-dimension="3">3维 (初始状态)</button>
+                <button class="dimension-btn" data-dimension="2">2维 (压缩存储)</button>
+                <button class="dimension-btn" data-dimension="4">4维 (穿墙模式)</button>
+                <button class="dimension-btn" data-dimension="over">过度折叠 (信息态)</button>
+            </div>
+
+            <div class="control-group">
+                <h3>折叠速度</h3>
+                <input type="range" class="fold-speed" id="foldSpeed" min="0.1" max="2" step="0.1" value="1">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; opacity: 0.7;">
+                    <span>慢</span>
+                    <span>快</span>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <h3>当前状态</h3>
+                <p class="status-text" id="statusText">
+                    三维物体处于稳定状态，可以进行维度折叠操作。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('origamiCanvas');
+        const ctx = canvas.getContext('2d');
+        const dimensionBtns = document.querySelectorAll('.dimension-btn');
+        const statusText = document.getElementById('statusText');
+        const foldSpeedInput = document.getElementById('foldSpeed');
+
+        // 设置Canvas尺寸
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 核心状态变量
+        const state = {
+            currentDimension: 3, // 当前维度 2/3/4/over
+            targetDimension: 3,  // 目标维度
+            foldProgress: 0,     // 折叠进度 0-1
+            foldSpeed: 1,        // 折叠速度
+            rotation: 0,         // 物体旋转角度
+            scale: 1,            // 物体缩放比例
+            opacity: 1,          // 物体透明度
+            noise: 0,            // 噪点强度（用于四维/过度折叠）
+        };
+
+        // 维度状态配置
+        const dimensionConfigs = {
+            2: {
+                name: '二维',
+                desc: '三维物体已折叠为二维形态，进入无限压缩存储状态，体积趋近于零。',
+                scale: 0.5,
+                opacity: 0.8,
+                noise: 0,
+                flatten: true // 扁平化
+            },
+            3: {
+                name: '三维',
+                desc: '三维物体处于稳定状态，可以进行维度折叠操作。',
+                scale: 1,
+                opacity: 1,
+                noise: 0,
+                flatten: false
+            },
+            4: {
+                name: '四维',
+                desc: '三维物体已折叠为四维形态，获得穿墙能力，物体边缘出现维度扭曲效果。',
+                scale: 1.2,
+                opacity: 0.9,
+                noise: 0.5,
+                flatten: false
+            },
+            over: {
+                name: '过度折叠',
+                desc: '⚠️ 警告：物质已转化为纯信息态，物理形态消失，仅保留数字信息特征！',
+                scale: 0.8,
+                opacity: 0.6,
+                noise: 1.5,
+                flatten: true
+            }
+        };
+
+        // 更新按钮状态
+        function updateBtnStates() {
+            dimensionBtns.forEach(btn => {
+                const dim = btn.dataset.dimension;
+                btn.classList.toggle('active', state.currentDimension == dim && state.foldProgress === 1);
+            });
+        }
+
+        // 更新状态文本
+        function updateStatus() {
+            if (state.foldProgress < 1) {
+                const config = dimensionConfigs[state.targetDimension];
+                statusText.innerHTML = `正在向${config.name}折叠中... 进度：${Math.round(state.foldProgress * 100)}%`;
+            } else {
+                const config = dimensionConfigs[state.currentDimension];
+                statusText.innerHTML = state.currentDimension === 'over' 
+                    ? `<span class="warning">${config.desc}</span>` 
+                    : config.desc;
+            }
+        }
+
+        // 切换维度
+        dimensionBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.targetDimension = btn.dataset.dimension;
+                state.foldProgress = 0;
+                updateBtnStates();
+                updateStatus();
+            });
+        });
+
+        // 监听折叠速度变化
+        foldSpeedInput.addEventListener('input', () => {
+            state.foldSpeed = parseFloat(foldSpeedInput.value);
+        });
+
+        // 绘制三维立方体（基础形状）
+        function drawCube(x, y, size, flatten = false) {
+            // 计算立方体顶点
+            const half = size / 2;
+            const depth = flatten ? 0 : half * 0.7;
+            
+            // 顶点坐标
+            const vertices = [
+                // 前面
+                { x: x - half, y: y - half, z: 0 },
+                { x: x + half, y: y - half, z: 0 },
+                { x: x + half, y: y + half, z: 0 },
+                { x: x - half, y: y + half, z: 0 },
+                // 后面
+                { x: x - half + depth, y: y - half - depth, z: depth },
+                { x: x + half + depth, y: y - half - depth, z: depth },
+                { x: x + half + depth, y: y + half - depth, z: depth },
+                { x: x - half + depth, y: y + half - depth, z: depth }
+            ];
+
+            // 应用旋转
+            const angle = state.rotation * Math.PI / 180;
+            vertices.forEach(v => {
+                const rx = v.x - x;
+                const rz = v.z;
+                v.x = x + rx * Math.cos(angle) - rz * Math.sin(angle);
+                v.z = rx * Math.sin(angle) + rz * Math.cos(angle);
+            });
+
+            // 绘制面
+            const faces = [
+                [0, 1, 2, 3], // 前面
+                [4, 5, 6, 7], // 后面
+                [0, 1, 5, 4], // 顶面
+                [2, 3, 7, 6], // 底面
+                [1, 2, 6, 5], // 右面
+                [0, 3, 7, 4]  // 左面
+            ];
+
+            const colors = [
+                'rgba(100, 255, 218, 0.7)',
+                'rgba(129, 199, 132, 0.7)',
+                'rgba(186, 104, 200, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(255, 99, 71, 0.7)',
+                'rgba(96, 165, 250, 0.7)'
+            ];
+
+            // 绘制每个面
+            for (let i = 0; i < faces.length; i++) {
+                const face = faces[i];
+                ctx.beginPath();
+                ctx.moveTo(vertices[face[0]].x, vertices[face[0]].y);
+                for (let j = 1; j < face.length; j++) {
+                    ctx.lineTo(vertices[face[j]].x, vertices[face[j]].y);
+                }
+                ctx.closePath();
+                
+                // 填充颜色
+                ctx.fillStyle = colors[i];
+                ctx.fill();
+                
+                // 绘制边框
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // 绘制噪点（用于维度扭曲效果）
+        function drawNoise(x, y, size, intensity) {
+            if (intensity <= 0) return;
+            
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            
+            for (let i = 0; i < 100 * intensity; i++) {
+                const nx = x + (Math.random() - 0.5) * size * 2;
+                const ny = y + (Math.random() - 0.5) * size * 2;
+                const radius = Math.random() * 3 * intensity;
+                const alpha = Math.random() * 0.3 * intensity;
+                
+                ctx.beginPath();
+                ctx.arc(nx, ny, radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(100, 255, 218, ${alpha})`;
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
+        // 绘制信息态（过度折叠）
+        function drawInformationState(x, y, size) {
+            ctx.save();
+            
+            // 绘制数字网格
+            ctx.strokeStyle = 'rgba(186, 104, 200, 0.5)';
+            ctx.lineWidth = 1;
+            
+            const gridSize = size / 10;
+            for (let i = -5; i <= 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(x + i * gridSize, y - size/2);
+                ctx.lineTo(x + i * gridSize, y + size/2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x - size/2, y + i * gridSize);
+                ctx.lineTo(x + size/2, y + i * gridSize);
+                ctx.stroke();
+            }
+            
+            // 绘制二进制数字
+            ctx.fillStyle = 'rgba(100, 255, 218, 0.8)';
+            ctx.font = `${gridSize * 0.8}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (let i = -4; i <= 4; i++) {
+                for (let j = -4; j <= 4; j++) {
+                    const char = Math.random() > 0.5 ? '1' : '0';
+                    ctx.fillText(char, x + i * gridSize, y + j * gridSize);
+                }
+            }
+            
+            ctx.restore();
+        }
+
+        // 动画循环
+        function animate() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 更新折叠进度
+            if (state.foldProgress < 1) {
+                state.foldProgress += 0.01 * state.foldSpeed;
+                state.foldProgress = Math.min(state.foldProgress, 1);
+                
+                // 进度完成后更新当前维度
+                if (state.foldProgress === 1) {
+                    state.currentDimension = state.targetDimension;
+                    updateBtnStates();
+                }
+            }
+            
+            // 更新旋转角度
+            state.rotation += 0.5 * state.foldSpeed;
+            if (state.rotation >= 360) state.rotation = 0;
+            
+            // 获取当前维度配置（插值计算过渡状态）
+            const targetConfig = dimensionConfigs[state.targetDimension];
+            const currentConfig = dimensionConfigs[state.currentDimension];
+            
+            const interpolatedScale = currentConfig.scale + (targetConfig.scale - currentConfig.scale) * state.foldProgress;
+            const interpolatedOpacity = currentConfig.opacity + (targetConfig.opacity - currentConfig.opacity) * state.foldProgress;
+            const interpolatedNoise = currentConfig.noise + (targetConfig.noise - currentConfig.noise) * state.foldProgress;
+            const interpolatedFlatten = state.currentDimension === '2' || state.targetDimension === '2' || state.targetDimension === 'over';
+            
+            // 中心位置
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const baseSize = Math.min(canvas.width, canvas.height) * 0.3;
+            const currentSize = baseSize * interpolatedScale;
+            
+            // 设置全局透明度
+            ctx.globalAlpha = interpolatedOpacity;
+            
+            // 根据维度绘制不同效果
+            if (state.targetDimension === 'over' && state.foldProgress > 0.8) {
+                // 过度折叠 - 信息态
+                drawInformationState(centerX, centerY, currentSize);
+            } else {
+                // 正常维度折叠
+                drawCube(centerX, centerY, currentSize, interpolatedFlatten);
+                
+                // 绘制维度扭曲噪点
+                drawNoise(centerX, centerY, currentSize, interpolatedNoise);
+            }
+            
+            // 更新状态文本
+            updateStatus();
+            
+            // 继续动画循环
+            requestAnimationFrame(animate);
+        }
+
+        // 初始化
+        updateBtnStates();
+        updateStatus();
+        animate();
+    </script>
+</body>
+</html>
