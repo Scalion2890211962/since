@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>概率锚 - 量子确定性发生器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f42 50%, #2d3466 100%);
+            min-height: 100vh;
+            color: #e0e8ff;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 量子背景粒子效果 */
+        .particle {
+            position: absolute;
+            background: rgba(100, 180, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(90deg, #64d2ff, #a884ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(100, 210, 255, 0.3);
+        }
+
+        .header p {
+            color: #99a8cc;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 概率锚核心面板 */
+        .anchor-panel {
+            background: rgba(15, 20, 45, 0.7);
+            border: 1px solid rgba(100, 210, 255, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #b8c8e0;
+            font-size: 1.05rem;
+        }
+
+        #anchor-text {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(20, 30, 60, 0.8);
+            border: 1px solid rgba(100, 210, 255, 0.2);
+            border-radius: 8px;
+            color: #e0e8ff;
+            font-size: 1rem;
+            resize: none;
+            min-height: 100px;
+            transition: border-color 0.3s ease;
+        }
+
+        #anchor-text:focus {
+            outline: none;
+            border-color: #64d2ff;
+            box-shadow: 0 0 10px rgba(100, 210, 255, 0.2);
+        }
+
+        /* 锚定按钮 */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        #anchor-btn {
+            flex: 1;
+            padding: 14px;
+            background: linear-gradient(90deg, #4a8eff, #64d2ff);
+            border: none;
+            border-radius: 8px;
+            color: #0a0e27;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(100, 210, 255, 0.3);
+        }
+
+        #anchor-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(100, 210, 255, 0.4);
+        }
+
+        #anchor-btn:disabled {
+            background: linear-gradient(90deg, #445577, #556688);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #reset-btn {
+            padding: 14px 20px;
+            background: rgba(60, 70, 100, 0.5);
+            border: 1px solid rgba(200, 80, 80, 0.5);
+            border-radius: 8px;
+            color: #ff8888;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #reset-btn:hover {
+            background: rgba(80, 50, 50, 0.5);
+            border-color: #ff8888;
+        }
+
+        /* 状态显示区域 */
+        .status-area {
+            border-top: 1px solid rgba(100, 210, 255, 0.2);
+            padding-top: 25px;
+        }
+
+        .status-title {
+            color: #a884ff;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-title i {
+            font-style: normal;
+            color: #64d2ff;
+        }
+
+        #status-display {
+            background: rgba(10, 15, 35, 0.8);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #99e0ff;
+            white-space: pre-line;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #64d2ff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .anchor-panel {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景粒子 -->
+    <div id="particles"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>概率锚 · 量子确定性发生器</h1>
+            <p>量子文明制造的可能性锁定装置，将任意事件的"可能性"强制导向"必然性"分支</p>
+        </div>
+
+        <div class="anchor-panel">
+            <!-- 锚定内容输入 -->
+            <div class="input-group">
+                <label for="anchor-text">输入需要锚定的事件</label>
+                <textarea id="anchor-text" placeholder="例如：这艘飞船必定安全抵达
+例如：本次任务必定成功完成
+例如：所有船员必定平安返回"></textarea>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="btn-group">
+                <button id="anchor-btn">启动概率锚定</button>
+                <button id="reset-btn">重置锚定状态</button>
+            </div>
+
+            <!-- 状态显示 -->
+            <div class="status-area">
+                <div class="status-title">
+                    <i>⚡</i> 量子状态监控
+                </div>
+                <div id="status-display">
+                    [系统就绪] 等待输入锚定事件，启动概率锁定程序...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 背景粒子效果
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = window.innerWidth > 600 ? 80 : 40;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // 随机大小和位置
+                const size = Math.random() * 8 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.top = `${Math.random() * 100}vh`;
+                
+                // 随机移动动画
+                const duration = Math.random() * 20 + 10;
+                particle.style.animation = `float ${duration}s linear infinite`;
+                
+                // 自定义浮动动画
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes float {
+                        0% {
+                            transform: translate(0, 0) rotate(0deg);
+                            opacity: ${Math.random() * 0.5 + 0.2};
+                        }
+                        50% {
+                            transform: translate(${Math.random() * 40 - 20}px, ${Math.random() * 40 - 20}px) rotate(180deg);
+                            opacity: ${Math.random() * 0.5 + 0.5};
+                        }
+                        100% {
+                            transform: translate(0, 0) rotate(360deg);
+                            opacity: ${Math.random() * 0.5 + 0.2};
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // 2. 核心锚定逻辑
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化粒子
+            createParticles();
+
+            // 获取DOM元素
+            const anchorText = document.getElementById('anchor-text');
+            const anchorBtn = document.getElementById('anchor-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const statusDisplay = document.getElementById('status-display');
+
+            // 锚定按钮点击事件
+            anchorBtn.addEventListener('click', async () => {
+                const text = anchorText.value.trim();
+                
+                // 输入验证
+                if (!text) {
+                    statusDisplay.textContent = '[错误] 请输入需要锚定的事件内容！';
+                    statusDisplay.style.color = '#ff8888';
+                    return;
+                }
+
+                // 禁用按钮，显示加载状态
+                anchorBtn.disabled = true;
+                anchorBtn.innerHTML = '<span class="loading"></span>锚定中...';
+                statusDisplay.style.color = '#99e0ff';
+                
+                // 模拟量子锚定过程
+                try {
+                    // 步骤1：初始化量子场
+                    statusDisplay.textContent = `[初始化] 正在连接量子概率场...
+[扫描] 检测到锚定事件："${text}"
+[校准] 量子相位校准中...`;
+                    await delay(1500);
+
+                    // 步骤2：锁定概率分支
+                    statusDisplay.textContent += `
+[锁定] 定位目标现实分支...
+[计算] 正在消除所有负面可能性(${Math.floor(Math.random() * 80) + 20}个分支已清除)...`;
+                    await delay(2000);
+
+                    // 步骤3：完成锚定
+                    statusDisplay.textContent += `
+[锚定成功] 概率锚已生效！
+[结果] "${text}" 已被强制设定为必然事件
+[状态] 量子场稳定，锚定持续时间：永久`;
+                    statusDisplay.style.color = '#88ffaa';
+
+                } catch (error) {
+                    statusDisplay.textContent = '[错误] 量子锚定失败，请检查输入并重试！';
+                    statusDisplay.style.color = '#ff8888';
+                } finally {
+                    // 恢复按钮状态
+                    anchorBtn.disabled = false;
+                    anchorBtn.innerHTML = '启动概率锚定';
+                }
+            });
+
+            // 重置按钮点击事件
+            resetBtn.addEventListener('click', () => {
+                anchorText.value = '';
+                statusDisplay.textContent = '[系统就绪] 等待输入锚定事件，启动概率锁定程序...';
+                statusDisplay.style.color = '#99e0ff';
+                anchorBtn.disabled = false;
+                anchorBtn.innerHTML = '启动概率锚定';
+            });
+
+            // 延迟函数
+            function delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        });
+    </script>
+</body>
+</html>
