@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>熵减引擎 - Negentropy Drive</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a1a 0%, #12122c 50%, #1a1a3a 100%);
+            color: #e0e0ff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 页面容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 标题区域 */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+            border-bottom: 1px solid #3a3a6a;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #4d88ff, #a366ff, #4d88ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #8a8acc;
+            font-size: 1.1rem;
+        }
+
+        /* 引擎核心展示区 */
+        .engine-core {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin: 40px 0;
+            border-radius: 15px;
+            background: rgba(10, 10, 30, 0.8);
+            border: 1px solid #2a2a5a;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 熵减核心动画 */
+        .core-animation {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+
+        .core-circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 4s infinite ease-in-out;
+        }
+
+        .core-1 {
+            width: 100px;
+            height: 100px;
+            border-color: #4d88ff;
+            animation-delay: 0s;
+        }
+
+        .core-2 {
+            width: 180px;
+            height: 180px;
+            border-color: #8a66ff;
+            animation-delay: 0.5s;
+        }
+
+        .core-3 {
+            width: 260px;
+            height: 260px;
+            border-color: #a34dff;
+            animation-delay: 1s;
+        }
+
+        /* 熵值粒子 */
+        .entropy-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ff6666;
+            border-radius: 50%;
+            animation: entropyFlow 6s infinite linear;
+        }
+
+        /* 有序粒子 */
+        .order-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #66ff66;
+            border-radius: 50%;
+            animation: orderFlow 6s infinite linear;
+        }
+
+        /* 状态控制面板 */
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .control-card {
+            background: rgba(20, 20, 50, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #3a3a6a;
+        }
+
+        .control-card h3 {
+            color: #4d88ff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-card .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+            transition: background 0.5s ease;
+        }
+
+        .control-card .status-indicator.active {
+            background: #44ff44;
+        }
+
+        .value-display {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #e0e0ff;
+        }
+
+        .unit {
+            font-size: 1rem;
+            color: #8a8acc;
+            margin-left: 5px;
+        }
+
+        /* 功能按钮区 */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #4d88ff, #8a66ff);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(77, 136, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(77, 136, 255, 0.2);
+            color: #4d88ff;
+            border: 1px solid #4d88ff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(77, 136, 255, 0.3);
+        }
+
+        /* 应用场景区 */
+        .scenarios {
+            margin: 60px 0;
+        }
+
+        .scenarios h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #a366ff;
+        }
+
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .scenario-card {
+            background: rgba(15, 15, 40, 0.7);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #2a2a5a;
+            transition: transform 0.3s ease;
+        }
+
+        .scenario-card:hover {
+            transform: translateY(-5px);
+            border-color: #4d88ff;
+        }
+
+        .scenario-card h3 {
+            color: #66ccff;
+            margin-bottom: 15px;
+        }
+
+        .scenario-card p {
+            color: #b0b0d0;
+            line-height: 1.6;
+        }
+
+        /* 动画定义 */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.3;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+
+        @keyframes entropyFlow {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(随机值, 随机值);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translate(200px, -200px);
+                opacity: 0;
+            }
+        }
+
+        @keyframes orderFlow {
+            0% {
+                transform: translate(200px, -200px);
+                opacity: 0;
+            }
+            30% {
+                transform: translate(随机值, 随机值);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            .engine-core {
+                height: 300px;
+            }
+            .core-animation {
+                width: 200px;
+                height: 200px;
+            }
+            .value-display {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 标题区域 -->
+        <div class="header">
+            <h1>熵减引擎 (Negentropy Drive)</h1>
+            <p>违反热力学第二定律的装置 | 向高维空间"倾倒"熵，使局部系统自发走向有序</p>
+        </div>
+
+        <!-- 引擎核心可视化区 -->
+        <div class="engine-core" id="engineCore">
+            <div class="core-animation">
+                <div class="core-circle core-1"></div>
+                <div class="core-circle core-2"></div>
+                <div class="core-circle core-3"></div>
+                <!-- 粒子将通过JS动态生成 -->
+            </div>
+        </div>
+
+        <!-- 状态控制面板 -->
+        <div class="control-panel">
+            <div class="control-card">
+                <h3><span class="status-indicator" id="engineStatus"></span> 引擎状态</h3>
+                <div class="value-display" id="statusText">未激活</div>
+            </div>
+            <div class="control-card">
+                <h3>局部熵值</h3>
+                <div class="value-display" id="entropyValue">897<span class="unit"> J/K</span></div>
+            </div>
+            <div class="control-card">
+                <h3>维度输出功率</h3>
+                <div class="value-display" id="dimensionPower">12<span class="unit"> GW</span></div>
+            </div>
+            <div class="control-card">
+                <h3>系统有序度</h3>
+                <div class="value-display" id="orderDegree">38<span class="unit"> %</span></div>
+            </div>
+        </div>
+
+        <!-- 功能按钮区 -->
+        <div class="button-group">
+            <button class="btn btn-primary" id="startEngine">启动熵减引擎</button>
+            <button class="btn btn-secondary" id="switchDimension">切换至高维空间</button>
+            <button class="btn btn-secondary" id="resetSystem">重置系统状态</button>
+        </div>
+
+        <!-- 应用场景区 -->
+        <div class="scenarios">
+            <h2>熵减引擎应用场景</h2>
+            <div class="scenario-grid">
+                <div class="scenario-card">
+                    <h3>逆转衰老</h3>
+                    <p>通过局部熵减，使生物体内的细胞结构恢复有序状态，逆转细胞老化过程，修复DNA损伤，延长生物寿命。</p>
+                </div>
+                <div class="scenario-card">
+                    <h3>修复生态系统</h3>
+                    <p>对受损的生态系统进行熵减处理，重组生态链结构，恢复土壤、水源和大气的有序状态，重建平衡的生态环境。</p>
+                </div>
+                <div class="scenario-card">
+                    <h3>星球重组</h3>
+                    <p>将破碎星球的物质进行熵减重构，重新排列原子和分子结构，恢复星球的完整形态和内部地质结构。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 核心变量
+        let isEngineActive = false;
+        let entropyValue = 897; // 初始熵值
+        let orderDegree = 38;   // 初始有序度
+        let dimensionPower = 12;// 初始维度功率
+        let particleCount = 0;
+
+        // DOM元素
+        const engineStatus = document.getElementById('engineStatus');
+        const statusText = document.getElementById('statusText');
+        const entropyValueEl = document.getElementById('entropyValue');
+        const dimensionPowerEl = document.getElementById('dimensionPower');
+        const orderDegreeEl = document.getElementById('orderDegree');
+        const engineCore = document.getElementById('engineCore');
+        const startEngineBtn = document.getElementById('startEngine');
+        const switchDimensionBtn = document.getElementById('switchDimension');
+        const resetSystemBtn = document.getElementById('resetSystem');
+
+        // 生成随机粒子
+        function createParticles(type, count) {
+            // 清除现有粒子
+            const existingParticles = document.querySelectorAll(`.${type}-particle`);
+            existingParticles.forEach(p => p.remove());
+
+            // 创建新粒子
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = `${type}-particle`;
+                
+                // 随机位置
+                const x = Math.random() * 300 - 150;
+                const y = Math.random() * 300 - 150;
+                particle.style.left = `150px`;
+                particle.style.top = `150px`;
+                
+                // 随机动画时长
+                const duration = 4 + Math.random() * 6;
+                particle.style.animationDuration = `${duration}s`;
+                particle.style.animationDelay = `${Math.random() * 3}s`;
+                
+                // 自定义动画路径
+                particle.style.animationName = type === 'entropy' ? 'entropyFlow' : 'orderFlow';
+                
+                engineCore.querySelector('.core-animation').appendChild(particle);
+            }
+            particleCount = count;
+        }
+
+        // 更新系统状态
+        function updateSystemStatus() {
+            if (!isEngineActive) return;
+
+            // 熵值降低，有序度提升，维度功率波动
+            entropyValue = Math.max(100, entropyValue - Math.random() * 5);
+            orderDegree = Math.min(100, orderDegree + Math.random() * 2);
+            dimensionPower = 10 + Math.random() * 10;
+
+            // 更新UI
+            entropyValueEl.textContent = Math.floor(entropyValue) + '<span class="unit"> J/K</span>';
+            entropyValueEl.innerHTML = Math.floor(entropyValue) + '<span class="unit"> J/K</span>';
+            orderDegreeEl.innerHTML = Math.floor(orderDegree) + '<span class="unit"> %</span>';
+            dimensionPowerEl.innerHTML = Math.floor(dimensionPower) + '<span class="unit"> GW</span>';
+
+            // 更新粒子数量（熵值越低，有序粒子越多）
+            const entropyParticleCount = Math.floor(entropyValue / 5);
+            const orderParticleCount = Math.floor(orderDegree * 2);
+            createParticles('entropy', entropyParticleCount);
+            createParticles('order', orderParticleCount);
+
+            // 持续更新
+            setTimeout(updateSystemStatus, 500);
+        }
+
+        // 启动引擎
+        startEngineBtn.addEventListener('click', function() {
+            if (isEngineActive) {
+                // 停止引擎
+                isEngineActive = false;
+                engineStatus.classList.remove('active');
+                statusText.textContent = '已停止';
+                startEngineBtn.textContent = '启动熵减引擎';
+            } else {
+                // 启动引擎
+                isEngineActive = true;
+                engineStatus.classList.add('active');
+                statusText.textContent = '运行中';
+                startEngineBtn.textContent = '停止熵减引擎';
+                updateSystemStatus();
+            }
+        });
+
+        // 切换维度
+        switchDimensionBtn.addEventListener('click', function() {
+            if (!isEngineActive) {
+                alert('请先启动熵减引擎！');
+                return;
+            }
+            
+            // 维度切换动画效果
+            engineCore.style.transition = 'all 1s ease';
+            engineCore.style.backgroundColor = 'rgba(5, 5, 40, 0.8)';
+            setTimeout(() => {
+                engineCore.style.backgroundColor = 'rgba(10, 10, 30, 0.8)';
+            }, 1000);
+            
+            // 临时提升维度功率
+            dimensionPower += 15;
+            dimensionPowerEl.innerHTML = Math.floor(dimensionPower) + '<span class="unit"> GW</span>';
+            
+            // 加速熵减
+            entropyValue -= 50;
+            entropyValueEl.innerHTML = Math.floor(entropyValue) + '<span class="unit"> J/K</span>';
+        });
+
+        // 重置系统
+        resetSystemBtn.addEventListener('click', function() {
+            isEngineActive = false;
+            engineStatus.classList.remove('active');
+            statusText.textContent = '未激活';
+            startEngineBtn.textContent = '启动熵减引擎';
+            
+            // 恢复初始值
+            entropyValue = 897;
+            orderDegree = 38;
+            dimensionPower = 12;
+            
+            // 更新UI
+            entropyValueEl.innerHTML = Math.floor(entropyValue) + '<span class="unit"> J/K</span>';
+            orderDegreeEl.innerHTML = Math.floor(orderDegree) + '<span class="unit"> %</span>';
+            dimensionPowerEl.innerHTML = Math.floor(dimensionPower) + '<span class="unit"> GW</span>';
+            
+            // 清除粒子
+            createParticles('entropy', 0);
+            createParticles('order', 0);
+        });
+
+        // 初始化粒子
+        createParticles('entropy', 30);
+        createParticles('order', 10);
+    </script>
+</body>
+</html>
