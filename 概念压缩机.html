@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>概念压缩机 | Notion Compressor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background: #0a0a1a;
+            color: #00ffcc;
+            overflow-x: hidden;
+            background-image: 
+                linear-gradient(rgba(10, 10, 26, 0.9) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(10, 10, 26, 0.9) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* 头部样式 */
+        header {
+            text-align: center;
+            padding: 2rem;
+            border-bottom: 2px solid #ff00ff;
+            box-shadow: 0 0 20px #ff00ff;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #ff00ff;
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* 压缩机主体 */
+        .compressor {
+            position: relative;
+            height: 500px;
+            background: linear-gradient(135deg, #111122, #1a1a33);
+            border: 3px solid #00ffcc;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
+            overflow: hidden;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 350px;
+            background: rgba(10, 10, 30, 0.9);
+            border: 2px solid #ff00ff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            z-index: 10;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #00ffcc;
+            font-weight: bold;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 0.8rem;
+            background: #050510;
+            border: 1px solid #00ffcc;
+            color: #ffffff;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #ff00ff;
+        }
+
+        .range-value {
+            color: #ff00ff;
+            font-size: 0.9rem;
+            text-align: right;
+            margin-top: 0.3rem;
+        }
+
+        button {
+            background: linear-gradient(to right, #ff00ff, #00ffcc);
+            border: none;
+            color: #000;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            box-shadow: 0 0 15px #ff00ff, 0 0 25px #00ffcc;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 压缩腔室 */
+        .compression-chamber {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 3px solid #00ffcc;
+            border-radius: 50%;
+            background: radial-gradient(circle, #111133 0%, #050510 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .concept-display {
+            color: #ffffff;
+            font-size: 1.8rem;
+            text-align: center;
+            text-shadow: 0 0 10px #ff00ff;
+            z-index: 5;
+        }
+
+        .loading-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .loading-circle {
+            position: absolute;
+            border: 3px solid transparent;
+            border-top: 3px solid #00ffcc;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        .circle-1 {
+            width: 80%;
+            height: 80%;
+        }
+
+        .circle-2 {
+            width: 60%;
+            height: 60%;
+            animation-duration: 1.5s;
+            border-top-color: #ff00ff;
+        }
+
+        .circle-3 {
+            width: 40%;
+            height: 40%;
+            animation-duration: 1s;
+            border-top-color: #ffff00;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 实体展示区 */
+        .entity-display {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            padding: 1rem;
+            background: rgba(10, 10, 30, 0.9);
+            border: 2px solid #00ffcc;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .entity-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #ff00ff;
+        }
+
+        .entity-properties {
+            color: #ffffff;
+            text-align: left;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .entity-properties p {
+            margin-bottom: 0.5rem;
+        }
+
+        /* 状态显示 */
+        .status-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            height: 150px;
+            background: #050510;
+            border: 2px solid #00ffcc;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .status-title {
+            color: #00ffcc;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #ff00ff;
+            padding-bottom: 0.5rem;
+        }
+
+        .status-value {
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 900px) {
+            .compressor {
+                height: 700px;
+            }
+            
+            .control-panel, .entity-display, .status-panel {
+                position: relative;
+                top: auto;
+                left: auto;
+                right: auto;
+                bottom: auto;
+                margin: 1rem auto;
+                width: 90%;
+            }
+            
+            .compression-chamber {
+                margin-top: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>概念压缩机 | Notion Compressor</h1>
+        <p class="subtitle">将抽象概念转化为物理实体的科幻设备</p>
+    </header>
+
+    <div class="container">
+        <div class="compressor">
+            <!-- 控制面板 -->
+            <div class="control-panel">
+                <div class="control-group">
+                    <label for="concept-input">输入抽象概念</label>
+                    <input type="text" id="concept-input" placeholder="例如：正义、乡愁、绝望、希望..." value="绝望">
+                </div>
+
+                <div class="control-group">
+                    <label for="compression-level">压缩等级</label>
+                    <input type="range" id="compression-level" min="1" max="10" value="7">
+                    <div class="range-value" id="compression-value">7/10</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="entity-type">实体形态</label>
+                    <select id="entity-type">
+                        <option value="grenade">手雷</option>
+                        <option value="crystal">晶体</option>
+                        <option value="capsule">胶囊</option>
+                        <option value="gas">气体罐</option>
+                        <option value="bullet">子弹</option>
+                    </select>
+                </div>
+
+                <button id="compress-btn">启动压缩程序</button>
+            </div>
+
+            <!-- 状态面板 -->
+            <div class="status-panel">
+                <h3 class="status-title">系统状态</h3>
+                <p class="status-value" id="status-text">待机中</p>
+                <p class="status-value" id="energy-level">能量: 100%</p>
+            </div>
+
+            <!-- 压缩腔室 -->
+            <div class="compression-chamber">
+                <div class="loading-animation" id="loading-anim">
+                    <div class="loading-circle circle-1"></div>
+                    <div class="loading-circle circle-2"></div>
+                    <div class="loading-circle circle-3"></div>
+                </div>
+                <div class="concept-display" id="concept-text">等待输入...</div>
+            </div>
+
+            <!-- 实体展示区 -->
+            <div class="entity-display" id="entity-view">
+                <div class="entity-icon" id="entity-icon">💣</div>
+                <h3 id="entity-name">绝望手雷</h3>
+                <div class="entity-properties">
+                    <p>概念强度: <span id="entity-strength">70</span>%</p>
+                    <p>稳定性: <span id="entity-stability">85</span>%</p>
+                    <p>效果范围: <span id="entity-range">100</span>米</p>
+                    <p>持续时间: <span id="entity-duration">15</span>分钟</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const conceptInput = document.getElementById('concept-input');
+        const compressionLevel = document.getElementById('compression-level');
+        const compressionValue = document.getElementById('compression-value');
+        const entityType = document.getElementById('entity-type');
+        const compressBtn = document.getElementById('compress-btn');
+        const statusText = document.getElementById('status-text');
+        const energyLevel = document.getElementById('energy-level');
+        const loadingAnim = document.getElementById('loading-anim');
+        const conceptText = document.getElementById('concept-text');
+        const entityView = document.getElementById('entity-view');
+        const entityIcon = document.getElementById('entity-icon');
+        const entityName = document.getElementById('entity-name');
+        const entityStrength = document.getElementById('entity-strength');
+        const entityStability = document.getElementById('entity-stability');
+        const entityRange = document.getElementById('entity-range');
+        const entityDuration = document.getElementById('entity-duration');
+
+        // 实体图标映射
+        const entityIcons = {
+            grenade: '💣',
+            crystal: '🔮',
+            capsule: '💊',
+            gas: '⚗️',
+            bullet: '🔫'
+        };
+
+        // 更新压缩等级显示
+        compressionLevel.addEventListener('input', () => {
+            compressionValue.textContent = `${compressionLevel.value}/10`;
+        });
+
+        // 压缩按钮点击事件
+        compressBtn.addEventListener('click', startCompression);
+
+        // 压缩核心逻辑
+        function startCompression() {
+            // 验证输入
+            const concept = conceptInput.value.trim();
+            if (!concept) {
+                alert('请输入有效的抽象概念！');
+                return;
+            }
+
+            // 禁用按钮，防止重复点击
+            compressBtn.disabled = true;
+            
+            // 更新状态
+            statusText.textContent = '压缩中...';
+            conceptText.textContent = `正在压缩: ${concept}`;
+            loadingAnim.style.display = 'block';
+            entityView.style.display = 'none';
+
+            // 模拟能量消耗动画
+            let energy = 100;
+            const energyInterval = setInterval(() => {
+                energy -= 5;
+                energyLevel.textContent = `能量: ${energy}%`;
+                
+                if (energy <= 0) {
+                    clearInterval(energyInterval);
+                }
+            }, 200);
+
+            // 模拟压缩过程（3秒后完成）
+            setTimeout(() => {
+                completeCompression(concept);
+                clearInterval(energyInterval);
+                energyLevel.textContent = '能量: 80%'; // 压缩完成后剩余能量
+                compressBtn.disabled = false;
+            }, 3000);
+        }
+
+        // 完成压缩，展示实体
+        function completeCompression(concept) {
+            // 更新状态
+            statusText.textContent = '压缩完成';
+            loadingAnim.style.display = 'none';
+            conceptText.textContent = concept;
+            
+            // 获取参数
+            const level = parseInt(compressionLevel.value);
+            const type = entityType.value;
+            const typeText = entityType.options[entityType.selectedIndex].text;
+
+            // 计算实体属性（基于压缩等级的随机值）
+            const strength = level * 10;
+            const stability = 100 - (level * 1.5) + Math.floor(Math.random() * 10);
+            const range = 50 + (level * 5) + Math.floor(Math.random() * 20);
+            const duration = 5 + (level * 1) + Math.floor(Math.random() * 5);
+
+            // 更新实体展示
+            entityIcon.textContent = entityIcons[type];
+            entityName.textContent = `${concept}${typeText}`;
+            entityStrength.textContent = strength;
+            entityStability.textContent = stability;
+            entityRange.textContent = range;
+            entityDuration.textContent = duration;
+            
+            entityView.style.display = 'block';
+            
+            // 添加实体出现动画
+            entityView.style.opacity = '0';
+            entityView.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                entityView.style.transition = 'all 0.5s ease';
+                entityView.style.opacity = '1';
+                entityView.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        // 初始化页面
+        window.addEventListener('load', () => {
+            conceptText.textContent = conceptInput.value;
+            entityIcon.textContent = entityIcons[entityType.value];
+            entityName.textContent = `${conceptInput.value}${entityType.options[entityType.selectedIndex].text}`;
+        });
+    </script>
+</body>
+</html>
