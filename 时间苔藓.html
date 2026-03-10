@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间苔藓 (Chrono-Moss)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: #0f1a1a;
+            color: #e0f0e0;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a2a2a, #0f1a1a);
+        }
+        
+        #time-axis {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: #2a3a3a;
+            transform: translateY(-50%);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 150, 0.3);
+        }
+        
+        #present-point {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            background: #00ff99;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px #00ff99;
+            z-index: 10;
+        }
+        
+        .moss-segment {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #00cc66, #00994d);
+            border-radius: 10px;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            z-index: 5;
+        }
+        
+        .resource-node {
+            position: absolute;
+            top: 50%;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            z-index: 8;
+            opacity: 0.5;
+            transition: all 0.2s ease;
+        }
+        
+        .resource-node.active {
+            opacity: 1;
+            box-shadow: 0 0 15px currentColor;
+        }
+        
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ff99;
+        }
+        
+        #energy-bar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        #energy-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #00ff99, #00cc66);
+            transition: width 0.3s ease;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            max-width: 300px;
+        }
+        
+        .resource-collected {
+            position: absolute;
+            color: #00ff99;
+            font-size: 16px;
+            animation: floatUp 1s ease-out forwards;
+            pointer-events: none;
+        }
+        
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="time-axis"></div>
+        <div id="present-point"></div>
+        
+        <!-- UI面板 -->
+        <div id="ui-panel">
+            <div>能量: <span id="energy-value">100</span>/100</div>
+            <div id="energy-bar">
+                <div id="energy-fill"></div>
+            </div>
+            <div>已收集资源: <span id="resource-count">0</span></div>
+        </div>
+        
+        <!-- 操作说明 -->
+        <div id="instructions">
+            🖱️ 鼠标拖动现在点(绿色圆点)向左(过去)/向右(未来)延伸时间苔藓<br>
+            🎯 点击发光的资源节点获取资源<br>
+            ⚡ 苔藓生长消耗能量，获取资源恢复能量<br>
+            ⏳ 过去(左)资源会快速消失，未来(右)资源需等待解锁
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心变量
+        const game = {
+            energy: 100,
+            maxEnergy: 100,
+            resourceCount: 0,
+            mossSegments: [],
+            resourceNodes: [],
+            timeAxis: document.getElementById('time-axis'),
+            presentPoint: document.getElementById('present-point'),
+            energyFill: document.getElementById('energy-fill'),
+            energyValue: document.getElementById('energy-value'),
+            resourceCountEl: document.getElementById('resource-count'),
+            container: document.getElementById('game-container'),
+            isDragging: false,
+            mossGrowthSpeed: 5, // 苔藓生长速度
+            energyConsumptionRate: 0.1, // 每帧能量消耗
+        };
+
+        // 初始化游戏
+        function initGame() {
+            // 创建随机资源节点
+            createResourceNodes(8);
+            
+            // 绑定事件监听
+            bindEventListeners();
+            
+            // 启动游戏循环
+            gameLoop();
+        }
+
+        // 创建资源节点
+        function createResourceNodes(count) {
+            const axisRect = game.timeAxis.getBoundingClientRect();
+            const centerX = axisRect.width / 2;
+            
+            for (let i = 0; i < count; i++) {
+                // 随机位置（左右分布）
+                const offsetX = (Math.random() - 0.5) * axisRect.width * 0.8;
+                const xPos = centerX + offsetX;
+                
+                // 随机资源类型
+                const resourceTypes = [
+                    { type: 'past', color: '#ff6666', value: 5, label: '旧' },
+                    { type: 'future', color: '#6666ff', value: 10, label: '新' },
+                    { type: 'present', color: '#ffff66', value: 8, label: '现' }
+                ];
+                const randomType = resourceTypes[Math.floor(Math.random() * resourceTypes.length)];
+                
+                // 创建节点元素
+                const node = document.createElement('div');
+                node.className = 'resource-node';
+                node.style.left = `${xPos}px`;
+                node.style.backgroundColor = randomType.color;
+                node.style.color = 'white';
+                node.textContent = randomType.label;
+                node.dataset = {
+                    type: randomType.type,
+                    value: randomType.value,
+                    x: xPos,
+                    active: false,
+                    decayTimer: randomType.type === 'past' ? 300 : Infinity, // 过去资源会衰减
+                };
+                
+                game.timeAxis.appendChild(node);
+                game.resourceNodes.push(node);
+            }
+        }
+
+        // 绑定事件监听
+        function bindEventListeners() {
+            // 鼠标拖动苔藓
+            game.presentPoint.addEventListener('mousedown', (e) => {
+                game.isDragging = true;
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mouseup', () => {
+                game.isDragging = false;
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!game.isDragging || game.energy <= 0) return;
+                
+                const axisRect = game.timeAxis.getBoundingClientRect();
+                const mouseX = e.clientX - axisRect.left;
+                const centerX = axisRect.width / 2;
+                
+                // 计算苔藓延伸范围
+                const mossWidth = Math.abs(mouseX - centerX);
+                const mossLeft = Math.min(mouseX, centerX);
+                
+                // 更新苔藓显示
+                updateMoss(mossLeft, mossWidth);
+                
+                // 消耗能量
+                game.energy = Math.max(0, game.energy - game.energyConsumptionRate * 2);
+                updateUI();
+            });
+            
+            // 触摸支持（移动端）
+            game.presentPoint.addEventListener('touchstart', (e) => {
+                game.isDragging = true;
+                e.preventDefault();
+            });
+            
+            document.addEventListener('touchend', () => {
+                game.isDragging = false;
+            });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (!game.isDragging || game.energy <= 0) return;
+                
+                const touch = e.touches[0];
+                const axisRect = game.timeAxis.getBoundingClientRect();
+                const touchX = touch.clientX - axisRect.left;
+                const centerX = axisRect.width / 2;
+                
+                const mossWidth = Math.abs(touchX - centerX);
+                const mossLeft = Math.min(touchX, centerX);
+                
+                updateMoss(mossLeft, mossWidth);
+                game.energy = Math.max(0, game.energy - game.energyConsumptionRate * 2);
+                updateUI();
+            });
+            
+            // 资源节点点击事件
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('resource-node') && e.target.dataset.active === 'true') {
+                    collectResource(e.target);
+                }
+            });
+        }
+
+        // 更新苔藓显示
+        function updateMoss(left, width) {
+            // 移除旧苔藓段
+            document.querySelectorAll('.moss-segment').forEach(el => el.remove());
+            
+            // 创建新苔藓段
+            const moss = document.createElement('div');
+            moss.className = 'moss-segment';
+            moss.style.left = `${left}px`;
+            moss.style.width = `${width}px`;
+            
+            game.timeAxis.appendChild(moss);
+            game.mossSegments = [moss];
+            
+            // 检查资源节点是否被苔藓覆盖
+            checkResourceCoverage();
+        }
+
+        // 检查资源节点覆盖状态
+        function checkResourceCoverage() {
+            if (game.mossSegments.length === 0) return;
+            
+            const mossRect = game.mossSegments[0].getBoundingClientRect();
+            const axisRect = game.timeAxis.getBoundingClientRect();
+            
+            game.resourceNodes.forEach(node => {
+                const nodeRect = node.getBoundingClientRect();
+                const nodeX = nodeRect.left - axisRect.left;
+                
+                // 判断是否在苔藓范围内
+                const isCovered = nodeX >= mossRect.left - axisRect.left && 
+                                  nodeX <= mossRect.right - axisRect.left;
+                
+                if (isCovered && game.energy > 0) {
+                    node.dataset.active = 'true';
+                    node.classList.add('active');
+                } else {
+                    node.dataset.active = 'false';
+                    node.classList.remove('active');
+                }
+            });
+        }
+
+        // 收集资源
+        function collectResource(node) {
+            const value = parseInt(node.dataset.value);
+            
+            // 更新资源计数
+            game.resourceCount += value;
+            game.resourceCountEl.textContent = game.resourceCount;
+            
+            // 恢复能量
+            game.energy = Math.min(game.maxEnergy, game.energy + value * 2);
+            updateUI();
+            
+            // 创建收集动画
+            const collectPopup = document.createElement('div');
+            collectPopup.className = 'resource-collected';
+            collectPopup.textContent = `+${value}`;
+            collectPopup.style.left = `${node.offsetLeft}px`;
+            collectPopup.style.top = `${node.offsetTop - 30}px`;
+            
+            game.timeAxis.appendChild(collectPopup);
+            setTimeout(() => collectPopup.remove(), 1000);
+            
+            // 移除已收集的节点
+            node.remove();
+            game.resourceNodes = game.resourceNodes.filter(n => n !== node);
+            
+            // 定时生成新节点
+            if (game.resourceNodes.length < 5) {
+                setTimeout(() => createResourceNodes(1), 2000);
+            }
+        }
+
+        // 更新UI
+        function updateUI() {
+            game.energyValue.textContent = Math.round(game.energy);
+            game.energyFill.style.width = `${(game.energy / game.maxEnergy) * 100}%`;
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            // 能量自然恢复
+            if (!game.isDragging && game.energy < game.maxEnergy) {
+                game.energy = Math.min(game.maxEnergy, game.energy + 0.05);
+                updateUI();
+            }
+            
+            // 处理过去资源的衰减
+            game.resourceNodes.forEach(node => {
+                if (node.dataset.type === 'past' && node.dataset.active === 'true') {
+                    node.dataset.decayTimer = parseInt(node.dataset.decayTimer) - 1;
+                    
+                    // 资源消失
+                    if (node.dataset.decayTimer <= 0) {
+                        node.remove();
+                        game.resourceNodes = game.resourceNodes.filter(n => n !== node);
+                    }
+                    
+                    // 视觉效果：衰减的资源透明度降低
+                    node.style.opacity = Math.max(0.5, node.dataset.decayTimer / 300);
+                }
+            });
+            
+            // 持续检查资源覆盖
+            checkResourceCoverage();
+            
+            // 循环调用
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 启动游戏
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
