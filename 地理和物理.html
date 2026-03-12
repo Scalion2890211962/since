@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>积分探险家：地理物理大冒险</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .math-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.3);
+        }
+        .terrain-mountain {
+            background: linear-gradient(180deg, #e2e8f0 0%, #94a3b8 50%, #475569 100%);
+        }
+        .terrain-desert {
+            background: linear-gradient(180deg, #fef3c7 0%, #fbbf24 50%, #d97706 100%);
+        }
+        .terrain-forest {
+            background: linear-gradient(180deg, #dcfce7 0%, #86efac 50%, #16a34a 100%);
+        }
+        .terrain-ocean {
+            background: linear-gradient(180deg, #dbeafe 0%, #60a5fa 50%, #1e40af 100%);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.8), 0 0 40px rgba(99, 102, 241, 0.4); }
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+        .integral-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(99, 102, 241, 0.5);
+            transition: all 0.3s;
+        }
+        .integral-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white overflow-hidden">
+
+    <!-- 游戏容器 -->
+    <div id="gameContainer" class="relative w-full h-screen">
+        
+        <!-- 背景层 -->
+        <canvas id="bgCanvas" class="absolute inset-0 w-full h-full"></canvas>
+        
+        <!-- 游戏层 -->
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full"></canvas>
+        
+        <!-- UI层 -->
+        <div id="uiLayer" class="absolute inset-0 pointer-events-none">
+            
+            <!-- HUD -->
+            <div id="hud" class="hidden absolute top-0 left-0 right-0 p-4 flex justify-between items-start">
+                <div class="glass-panel rounded-2xl p-4 pointer-events-auto">
+                    <div class="text-sm text-gray-300 mb-1">当前关卡</div>
+                    <div id="levelName" class="text-xl font-bold text-yellow-300">阿尔卑斯山脉</div>
+                    <div class="text-xs text-gray-400 mt-1">地形: <span id="terrainType">山地</span></div>
+                </div>
+                
+                <div class="glass-panel rounded-2xl p-4 pointer-events-auto text-center">
+                    <div class="text-sm text-gray-300">能量值</div>
+                    <div class="w-32 h-4 bg-gray-700 rounded-full mt-2 overflow-hidden">
+                        <div id="energyBar" class="h-full bg-gradient-to-r from-green-400 to-blue-500 transition-all duration-500" style="width: 100%"></div>
+                    </div>
+                    <div id="energyText" class="text-xs mt-1">100/100</div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-4 pointer-events-auto text-right">
+                    <div class="text-sm text-gray-300">积分</div>
+                    <div id="score" class="text-2xl font-bold text-green-400 math-font">0</div>
+                    <div class="text-xs text-gray-400">物理公式解锁: <span id="formulasUnlocked">3</span>/12</div>
+                </div>
+            </div>
+
+            <!-- 开始界面 -->
+            <div id="startScreen" class="absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/40 backdrop-blur-sm">
+                <div class="glass-panel rounded-3xl p-8 max-w-2xl w-full mx-4 text-center floating">
+                    <h1 class="text-5xl font-black mb-2 bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-400">
+                        积分探险家
+                    </h1>
+                    <p class="text-xl text-gray-300 mb-6">地理物理大冒险</p>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-8 text-sm">
+                        <div class="glass-panel rounded-xl p-3">
+                            <div class="text-2xl mb-1">🧮</div>
+                            <div class="font-bold">解不定积分</div>
+                            <div class="text-gray-400 text-xs mt-1">计算原函数</div>
+                        </div>
+                        <div class="glass-panel rounded-xl p-3">
+                            <div class="text-2xl mb-1">🌍</div>
+                            <div class="font-bold">探索地理</div>
+                            <div class="text-gray-400 text-xs mt-1">穿越多样地形</div>
+                        </div>
+                        <div class="glass-panel rounded-xl p-3">
+                            <div class="text-2xl mb-1">⚡</div>
+                            <div class="font-bold">应用物理</div>
+                            <div class="text-gray-400 text-xs mt-1">运动与能量</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button onclick="startGame()" class="btn-primary w-full py-4 rounded-xl text-xl font-bold text-white">
+                            开始探险
+                        </button>
+                        <button onclick="showTutorial()" class="w-full py-3 rounded-xl border border-white/30 hover:bg-white/10 transition text-white/80">
+                            游戏教程
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 教程界面 -->
+            <div id="tutorialScreen" class="hidden absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/60 backdrop-blur-md">
+                <div class="glass-panel rounded-3xl p-8 max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <h2 class="text-3xl font-bold mb-6 text-center">游戏机制</h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex gap-4 items-start">
+                            <div class="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-2xl flex-shrink-0">1</div>
+                            <div>
+                                <h3 class="font-bold text-lg mb-1">观察物理场景</h3>
+                                <p class="text-gray-300 text-sm">每个关卡都有特定的地理环境（山地、沙漠、森林、海洋）和物理挑战。观察物体的运动状态：速度、加速度、位置。</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-4 items-start">
+                            <div class="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center text-2xl flex-shrink-0">2</div>
+                            <div>
+                                <h3 class="font-bold text-lg mb-1">建立积分模型</h3>
+                                <p class="text-gray-300 text-sm">根据物理定律建立方程。例如：已知加速度 $a(t)$，通过积分 $\int a(t)dt$ 求速度；已知速度，积分求位移。</p>
+                                <div class="mt-2 p-3 bg-black/30 rounded-lg math-font text-sm">
+                                    v(t) = ∫a(t)dt + C<br>
+                                    s(t) = ∫v(t)dt + C
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-4 items-start">
+                            <div class="w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center text-2xl flex-shrink-0">3</div>
+                            <div>
+                                <h3 class="font-bold text-lg mb-1">求解与应用</h3>
+                                <p class="text-gray-300 text-sm">选择正确的积分技巧（换元法、分部积分等），计算原函数，确定积分常数（利用初始条件），让角色成功到达目的地。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="closeTutorial()" class="mt-8 w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 transition font-bold">
+                        明白了，开始游戏！
+                    </button>
+                </div>
+            </div>
+
+            <!-- 关卡选择 -->
+            <div id="levelSelect" class="hidden absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/50 backdrop-blur-md">
+                <div class="glass-panel rounded-3xl p-8 max-w-4xl w-full mx-4">
+                    <h2 class="text-3xl font-bold mb-6 text-center">选择探险区域</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="levelGrid">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 游戏主界面 - 积分挑战 -->
+            <div id="challengePanel" class="hidden absolute bottom-0 left-0 right-0 p-6 pointer-events-auto">
+                <div class="glass-panel rounded-2xl p-6 max-w-4xl mx-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <div class="text-sm text-gray-400 mb-1">物理挑战</div>
+                            <div id="challengeTitle" class="text-xl font-bold text-cyan-300">计算运动轨迹</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-400">剩余时间</div>
+                            <div id="timer" class="text-2xl font-bold math-font text-red-400">60</div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="text-sm text-gray-400 mb-2">问题描述</div>
+                            <div id="problemDesc" class="bg-black/30 rounded-lg p-4 text-sm leading-relaxed mb-4">
+                                一个物体在重力作用下自由落体，加速度 $a(t) = g = 9.8 m/s^2$。已知初速度 $v_0 = 0$，求速度函数 $v(t)$。
+                            </div>
+                            
+                            <div class="text-sm text-gray-400 mb-2">提示</div>
+                            <div id="hint" class="text-xs text-yellow-300/80 italic">
+                                使用基本积分公式：∫t^n dt = t^(n+1)/(n+1) + C
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-sm text-gray-400 mb-2">你的解答</div>
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="math-font text-lg">∫</span>
+                                    <input type="text" id="integrand" class="integral-input rounded-lg px-3 py-2 text-white math-font w-full" placeholder="被积函数，如: 9.8" readonly>
+                                    <span class="math-font text-lg">dt =</span>
+                                </div>
+                                <input type="text" id="userAnswer" class="integral-input rounded-lg px-3 py-2 text-white math-font w-full" placeholder="输入你的答案，如: 9.8t + C">
+                                
+                                <div class="flex gap-2">
+                                    <button onclick="checkAnswer()" class="btn-primary flex-1 py-3 rounded-lg font-bold">
+                                        提交答案
+                                    </button>
+                                    <button onclick="useHint()" class="px-4 py-3 rounded-lg bg-yellow-600/80 hover:bg-yellow-600 transition font-bold text-sm">
+                                        💡 提示 (-10分)
+                                    </button>
+                                    <button onclick="skipProblem()" class="px-4 py-3 rounded-lg bg-gray-600/80 hover:bg-gray-600 transition font-bold text-sm">
+                                        跳过
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="feedback" class="mt-3 text-sm font-bold hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果界面 -->
+            <div id="resultScreen" class="hidden absolute inset-0 flex items-center justify-center pointer-events-auto bg-black/70 backdrop-blur-md">
+                <div class="glass-panel rounded-3xl p-8 max-w-lg w-full mx-4 text-center">
+                    <div id="resultIcon" class="text-6xl mb-4">🎉</div>
+                    <h2 id="resultTitle" class="text-3xl font-bold mb-2">挑战成功！</h2>
+                    <p id="resultMessage" class="text-gray-300 mb-6">你成功计算出了运动方程，角色安全到达了目的地。</p>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="glass-panel rounded-xl p-3">
+                            <div class="text-xs text-gray-400">得分</div>
+                            <div id="resultScore" class="text-xl font-bold text-green-400">+100</div>
+                        </div>
+                        <div class="glass-panel rounded-xl p-3">
+                            <div class="text-xs text-gray-400">用时</div>
+                            <div id="resultTime" class="text-xl font-bold text-blue-400">45s</div>
+                        </div>
+                        <div class="glass-panel rounded-xl p-3">
+                            <div class="text-xs text-gray-400">能量</div>
+                            <div id="resultEnergy" class="text-xl font-bold text-yellow-400">80%</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button onclick="nextLevel()" class="btn-primary w-full py-3 rounded-xl font-bold">
+                            下一关
+                        </button>
+                        <button onclick="retryLevel()" class="w-full py-3 rounded-xl border border-white/30 hover:bg-white/10 transition">
+                            重试本关
+                        </button>
+                        <button onclick="backToMenu()" class="w-full py-3 rounded-xl border border-white/30 hover:bg-white/10 transition">
+                            返回主菜单
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            currentLevel: 0,
+            score: 0,
+            energy: 100,
+            unlockedLevels: [0],
+            formulas: [],
+            timer: null,
+            timeLeft: 60,
+            currentProblem: null,
+            isPlaying: false
+        };
+
+        // 关卡数据 - 结合地理、物理和积分
+        const levels = [
+            {
+                id: 0,
+                name: "阿尔卑斯山脉",
+                terrain: "mountain",
+                terrainName: "山地",
+                theme: "自由落体与重力加速度",
+                physics: "已知加速度求速度",
+                bgGradient: ["#e2e8f0", "#94a3b8"],
+                problem: {
+                    desc: "探险者从山顶静止开始下滑，沿斜坡的加速度恒定为 a(t) = 3 m/s²。求速度函数 v(t)。",
+                    integrand: "3",
+                    correct: ["3t", "3t+c", "3t+C", "3*t"],
+                    hint: "∫3 dt = 3t + C，初速度为0，所以 C=0",
+                    type: "basic",
+                    technique: "基本积分"
+                }
+            },
+            {
+                id: 1,
+                name: "撒哈拉沙漠",
+                terrain: "desert",
+                terrainName: "沙漠",
+                theme: "变加速运动与阻力",
+                physics: "速度依赖的加速度",
+                bgGradient: ["#fef3c7", "#fbbf24"],
+                problem: {
+                    desc: "沙地车辆受到阻力，加速度 a(t) = 4 - 0.5t。求速度函数 v(t)，初速度 v(0)=2。",
+                    integrand: "4-0.5t",
+                    correct: ["4t-0.25t^2+2", "4t-0.25t²+2", "4t-t^2/4+2", "4t-1/4*t^2+2"],
+                    hint: "分别积分：∫4dt=4t，∫0.5tdt=0.25t²，别忘了加初速度2",
+                    type: "linear",
+                    technique: "线性性质"
+                }
+            },
+            {
+                id: 2,
+                name: "亚马逊雨林",
+                terrain: "forest",
+                terrainName: "热带雨林",
+                theme: "指数增长与衰减",
+                physics: "种群增长模型",
+                bgGradient: ["#dcfce7", "#16a34a"],
+                problem: {
+                    desc: "雨林中某植物生长速率 v(t) = 2e^(0.5t) cm/天。求高度函数 h(t)，初始高度为1cm。",
+                    integrand: "2e^(0.5t)",
+                    correct: ["4e^(0.5t)-3", "4e^0.5t-3", "4e^(t/2)-3"],
+                    hint: "∫e^(kt)dt = (1/k)e^(kt)，这里k=0.5，所以∫2e^(0.5t)dt = 4e^(0.5t)",
+                    type: "exponential",
+                    technique: "指数函数积分"
+                }
+            },
+            {
+                id: 3,
+                name: "太平洋深海",
+                terrain: "ocean",
+                terrainName: "海洋",
+                theme: "简谐振动与波浪",
+                physics: "三角函数积分",
+                bgGradient: ["#dbeafe", "#1e40af"],
+                problem: {
+                    desc: "浮标随波浪上下运动，速度 v(t) = 2cos(t) m/s。求位移函数 s(t)，初始位置 s(0)=0。",
+                    integrand: "2cos(t)",
+                    correct: ["2sin(t)", "2sin(t)+c", "2sin(t)+C", "2sint"],
+                    hint: "∫cos(t)dt = sin(t)，所以结果是 2sin(t)，初位置为0，常数为0",
+                    type: "trigonometric",
+                    technique: "三角函数积分"
+                }
+            },
+            {
+                id: 4,
+                name: "喜马拉雅雪峰",
+                terrain: "mountain",
+                terrainName: "高山雪地",
+                theme: "变力做功与能量",
+                physics: "幂函数积分",
+                bgGradient: ["#f1f5f9", "#64748b"],
+                problem: {
+                    desc: "登山者克服重力做功，功率 P(t) = 5t^2 + 2t 瓦特。求能量函数 E(t)，初始能量为10焦耳。",
+                    integrand: "5t^2+2t",
+                    correct: ["5/3t^3+t^2+10", "(5/3)t^3+t^2+10", "5t^3/3+t^2+10", "1.67t^3+t^2+10"],
+                    hint: "∫t^n dt = t^(n+1)/(n+1)，所以 ∫5t²dt = 5t³/3，∫2tdt = t²",
+                    type: "polynomial",
+                    technique: "幂函数积分"
+                }
+            },
+            {
+                id: 5,
+                name: "戈壁滩",
+                terrain: "desert",
+                terrainName: "戈壁",
+                theme: "换元法应用",
+                physics: "复杂运动轨迹",
+                bgGradient: ["#fde68a", "#d97706"],
+                problem: {
+                    desc: "风沙中物体运动，速度 v(t) = 3t/(1+t^2) m/s。用换元法求位移 s(t)，s(0)=0。",
+                    integrand: "3t/(1+t^2)",
+                    correct: ["1.5ln(1+t^2)", "3/2ln(1+t^2)", "1.5ln(t^2+1)", "3/2*ln(1+t^2)"],
+                    hint: "令 u=1+t²，du=2tdt，所以 ∫3t/(1+t²)dt = (3/2)∫du/u = (3/2)ln|u|",
+                    type: "substitution",
+                    technique: "换元积分法"
+                }
+            },
+            {
+                id: 6,
+                name: "刚果盆地",
+                terrain: "forest",
+                terrainName: "丛林",
+                theme: "分部积分法",
+                physics: "阻尼振动",
+                bgGradient: ["#86efac", "#15803d"],
+                problem: {
+                    desc: "藤蔓摆动受到阻尼，加速度 a(t) = te^(-t)。用分部积分法求速度 v(t)，v(0)=0。",
+                    integrand: "te^(-t)",
+                    correct: ["-te^(-t)-e^(-t)+1", "-e^(-t)(t+1)+1", "1-(t+1)e^(-t)", "1-e^(-t)(t+1)"],
+                    hint: "分部积分：∫udv=uv-∫vdu，设 u=t, dv=e^(-t)dt，则 du=dt, v=-e^(-t)",
+                    type: "parts",
+                    technique: "分部积分法"
+                }
+            },
+            {
+                id: 7,
+                name: "马里亚纳海沟",
+                terrain: "ocean",
+                terrainName: "深海",
+                theme: "复杂积分挑战",
+                physics: "流体阻力",
+                bgGradient: ["#60a5fa", "#1e3a8a"],
+                problem: {
+                    desc: "潜水器下潜，速度 v(t) = sin(t)cos(t)。利用三角恒等式求位移 s(t)，s(0)=0。",
+                    integrand: "sin(t)cos(t)",
+                    correct: ["0.5sin^2(t)", "1/2sin^2(t)", "sin^2(t)/2", "(1-cos(2t))/4", "0.25(1-cos(2t))"],
+                    hint: "sin(2t)=2sin(t)cos(t)，所以 sin(t)cos(t)=sin(2t)/2，或换元 u=sin(t)",
+                    type: "trick",
+                    technique: "三角恒等式/换元"
+                }
+            }
+        ];
+
+        // 音频上下文
+        let synth, membrane, metal;
+        let audioInitialized = false;
+
+        async function initAudio() {
+            if (audioInitialized) return;
+            await Tone.start();
+            
+            synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            membrane = new Tone.MembraneSynth().toDestination();
+            metal = new Tone.MetalSynth({
+                frequency: 200,
+                envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
+                harmonicity: 5.1,
+                modulationIndex: 32,
+                resonance: 4000,
+                octaves: 1.5
+            }).toDestination();
+            
+            audioInitialized = true;
+        }
+
+        function playSound(type) {
+            if (!audioInitialized) return;
+            switch(type) {
+                case 'correct':
+                    synth.triggerAttackRelease(["C5", "E5", "G5"], "8n");
+                    break;
+                case 'wrong':
+                    membrane.triggerAttackRelease("C2", "8n");
+                    break;
+                case 'click':
+                    metal.triggerAttackRelease("32n");
+                    break;
+                case 'win':
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C4", "8n", now);
+                    synth.triggerAttackRelease("E4", "8n", now + 0.1);
+                    synth.triggerAttackRelease("G4", "8n", now + 0.2);
+                    synth.triggerAttackRelease("C5", "4n", now + 0.3);
+                    break;
+            }
+        }
+
+        // Canvas 设置
+        const bgCanvas = document.getElementById('bgCanvas');
+        const gameCanvas = document.getElementById('gameCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const gameCtx = gameCanvas.getContext('2d');
+
+        function resizeCanvas() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+            gameCanvas.width = window.innerWidth;
+            gameCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 粒子系统
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 1;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1; // 重力
+                this.life -= 0.02;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        let particles = [];
+
+        // 游戏对象
+        class Player {
+            constructor() {
+                this.x = 100;
+                this.y = gameCanvas.height / 2;
+                this.targetX = gameCanvas.width - 100;
+                this.progress = 0;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 30;
+                this.color = '#6366f1';
+                this.trail = [];
+            }
+
+            update(dt) {
+                // 根据当前问题类型调整运动
+                if (gameState.currentProblem) {
+                    const t = (60 - gameState.timeLeft) / 60; // 归一化时间
+                    
+                    switch(gameState.currentProblem.type) {
+                        case 'basic':
+                            // 匀加速：s = 0.5*a*t²
+                            this.progress = Math.min(t * t * 0.5 * 3, 1);
+                            break;
+                        case 'linear':
+                            // 变加速
+                            this.progress = Math.min((4*t - 0.25*t*t + 2*t) / 10, 1);
+                            break;
+                        case 'exponential':
+                            // 指数增长
+                            this.progress = Math.min((Math.exp(0.5*t) - 1) / 3, 1);
+                            break;
+                        case 'trigonometric':
+                            // 简谐运动
+                            this.progress = Math.min((2*Math.sin(t*3)) / 6 + 0.3, 1);
+                            break;
+                        default:
+                            this.progress = t;
+                    }
+                }
+
+                this.x = 100 + (this.targetX - 100) * this.progress;
+                
+                // 添加轨迹
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 20) this.trail.shift();
+
+                // 地形影响
+                const level = levels[gameState.currentLevel];
+                if (level.terrain === 'mountain') {
+                    this.y = gameCanvas.height/2 + Math.sin(this.x/100) * 50;
+                } else if (level.terrain === 'desert') {
+                    this.y = gameCanvas.height/2 + Math.sin(this.x/150) * 30;
+                } else if (level.terrain === 'forest') {
+                    this.y = gameCanvas.height/2 + Math.cos(this.x/80) * 40;
+                } else {
+                    this.y = gameCanvas.height/2 + Math.sin(this.x/120) * 20;
+                }
+            }
+
+            draw(ctx) {
+                // 绘制轨迹
+                ctx.save();
+                ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                this.trail.forEach((p, i) => {
+                    if (i === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                });
+                ctx.stroke();
+
+                // 绘制角色（探险家）
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 内部细节
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 5, 6, 0, Math.PI * 2);
+                ctx.arc(this.x + 8, this.y - 5, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 5, 3, 0, Math.PI * 2);
+                ctx.arc(this.x + 8, this.y - 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 背包
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(this.x - 15, this.y + 5, 30, 20);
+            }
+        }
+
+        const player = new Player();
+
+        // 背景绘制
+        function drawBackground() {
+            const level = levels[gameState.currentLevel] || levels[0];
+            const gradient = bgCtx.createLinearGradient(0, 0, 0, bgCanvas.height);
+            gradient.addColorStop(0, level.bgGradient[0]);
+            gradient.addColorStop(1, level.bgGradient[1]);
+            bgCtx.fillStyle = gradient;
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+            // 绘制地形特征
+            bgCtx.save();
+            if (level.terrain === 'mountain') {
+                // 绘制山脉
+                bgCtx.fillStyle = 'rgba(100, 116, 139, 0.3)';
+                for (let i = 0; i < 5; i++) {
+                    bgCtx.beginPath();
+                    bgCtx.moveTo(i * 300, bgCanvas.height);
+                    bgCtx.lineTo(i * 300 + 150, bgCanvas.height - 300 - Math.random() * 100);
+                    bgCtx.lineTo(i * 300 + 300, bgCanvas.height);
+                    bgCtx.fill();
+                }
+            } else if (level.terrain === 'desert') {
+                // 绘制沙丘
+                bgCtx.fillStyle = 'rgba(217, 119, 6, 0.2)';
+                for (let i = 0; i < bgCanvas.width; i += 100) {
+                    bgCtx.beginPath();
+                    bgCtx.arc(i, bgCanvas.height, 80 + Math.random() * 40, Math.PI, 0);
+                    bgCtx.fill();
+                }
+            } else if (level.terrain === 'forest') {
+                // 绘制树木剪影
+                bgCtx.fillStyle = 'rgba(21, 128, 61, 0.2)';
+                for (let i = 50; i < bgCanvas.width; i += 150) {
+                    bgCtx.fillRect(i, bgCanvas.height - 150, 20, 150);
+                    bgCtx.beginPath();
+                    bgCtx.arc(i + 10, bgCanvas.height - 150, 40, 0, Math.PI * 2);
+                    bgCtx.fill();
+                }
+            } else if (level.terrain === 'ocean') {
+                // 绘制波浪
+                bgCtx.strokeStyle = 'rgba(30, 64, 175, 0.2)';
+                bgCtx.lineWidth = 3;
+                for (let y = bgCanvas.height - 200; y < bgCanvas.height; y += 40) {
+                    bgCtx.beginPath();
+                    for (let x = 0; x < bgCanvas.width; x += 20) {
+                        bgCtx.lineTo(x, y + Math.sin(x/50 + Date.now()/1000) * 10);
+                    }
+                    bgCtx.stroke();
+                }
+            }
+            bgCtx.restore();
+        }
+
+        // 游戏循环
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            // 清空画布
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            // 绘制背景
+            drawBackground();
+
+            // 绘制目标
+            const level = levels[gameState.currentLevel] || levels[0];
+            gameCtx.fillStyle = '#10b981';
+            gameCtx.shadowBlur = 30;
+            gameCtx.shadowColor = '#10b981';
+            gameCtx.fillRect(gameCanvas.width - 150, gameCanvas.height/2 - 40, 80, 80);
+            gameCtx.shadowBlur = 0;
+            
+            // 目标标记
+            gameCtx.fillStyle = '#fff';
+            gameCtx.font = 'bold 30px Arial';
+            gameCtx.textAlign = 'center';
+            gameCtx.fillText('🏁', gameCanvas.width - 110, gameCanvas.height/2 + 10);
+
+            // 更新和绘制玩家
+            if (gameState.isPlaying) {
+                player.update(dt);
+            }
+            player.draw(gameCtx);
+
+            // 绘制粒子
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.update();
+                p.draw(gameCtx);
+            });
+
+            // 绘制数学公式装饰
+            gameCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            gameCtx.font = '20px JetBrains Mono';
+            gameCtx.textAlign = 'left';
+            const formulas = ['∫f(x)dx', 'F(x)+C', 'd/dx', 'lim'];
+            formulas.forEach((f, i) => {
+                gameCtx.fillText(f, 50 + i * 150, 100 + Math.sin(timestamp/1000 + i) * 20);
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // UI 函数
+        function startGame() {
+            initAudio();
+            playSound('click');
+            document.getElementById('startScreen').classList.add('hidden');
+            showLevelSelect();
+        }
+
+        function showTutorial() {
+            playSound('click');
+            document.getElementById('tutorialScreen').classList.remove('hidden');
+        }
+
+        function closeTutorial() {
+            playSound('click');
+            document.getElementById('tutorialScreen').classList.add('hidden');
+            startGame();
+        }
+
+        function showLevelSelect() {
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+            
+            levels.forEach((level, index) => {
+                const isUnlocked = gameState.unlockedLevels.includes(index);
+                const isCurrent = index === gameState.currentLevel;
+                
+                const card = document.createElement('div');
+                card.className = `glass-panel rounded-xl p-4 cursor-pointer transition transform hover:scale-105 ${isUnlocked ? '' : 'opacity-50'} ${isCurrent ? 'ring-2 ring-yellow-400' : ''}`;
+                card.innerHTML = `
+                    <div class="text-3xl mb-2">${getTerrainEmoji(level.terrain)}</div>
+                    <div class="font-bold text-sm mb-1">${level.name}</div>
+                    <div class="text-xs text-gray-400 mb-2">${level.theme}</div>
+                    <div class="flex gap-1 flex-wrap">
+                        <span class="text-[10px] px-2 py-1 rounded bg-white/10">${level.technique}</span>
+                    </div>
+                    ${!isUnlocked ? '<div class="mt-2 text-xs text-yellow-400">🔒 锁定</div>' : ''}
+                `;
+                
+                if (isUnlocked) {
+                    card.onclick = () => selectLevel(index);
+                }
+                grid.appendChild(card);
+            });
+            
+            document.getElementById('levelSelect').classList.remove('hidden');
+        }
+
+        function getTerrainEmoji(terrain) {
+            const map = {
+                'mountain': '🏔️',
+                'desert': '🏜️',
+                'forest': '🌲',
+                'ocean': '🌊'
+            };
+            return map[terrain] || '🌍';
+        }
+
+        function selectLevel(index) {
+            playSound('click');
+            gameState.currentLevel = index;
+            document.getElementById('levelSelect').classList.add('hidden');
+            startLevel();
+        }
+
+        function startLevel() {
+            const level = levels[gameState.currentLevel];
+            gameState.currentProblem = level.problem;
+            gameState.timeLeft = 60;
+            gameState.isPlaying = true;
+            gameState.energy = 100;
+            
+            // 更新UI
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('challengePanel').classList.remove('hidden');
+            document.getElementById('levelName').textContent = level.name;
+            document.getElementById('terrainType').textContent = level.terrainName;
+            document.getElementById('challengeTitle').textContent = level.physics;
+            document.getElementById('problemDesc').innerHTML = level.problem.desc;
+            document.getElementById('integrand').value = level.problem.integrand;
+            document.getElementById('userAnswer').value = '';
+            document.getElementById('hint').textContent = '💡 ' + level.problem.hint;
+            document.getElementById('feedback').classList.add('hidden');
+            
+            updateHUD();
+            
+            // 启动计时器
+            if (gameState.timer) clearInterval(gameState.timer);
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                document.getElementById('timer').textContent = gameState.timeLeft;
+                if (gameState.timeLeft <= 0) {
+                    gameOver(false);
+                }
+            }, 1000);
+            
+            // 创建开始粒子效果
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(player.x, player.y, '#6366f1'));
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('energyBar').style.width = gameState.energy + '%';
+            document.getElementById('energyText').textContent = `${gameState.energy}/100`;
+            document.getElementById('formulasUnlocked').textContent = Math.min(gameState.currentLevel + 3, 12);
+        }
+
+        function checkAnswer() {
+            const userAns = document.getElementById('userAnswer').value.trim().toLowerCase().replace(/\s/g, '');
+            const correct = gameState.currentProblem.correct;
+            
+            const isCorrect = correct.some(ans => {
+                const normalized = ans.toLowerCase().replace(/\s/g, '');
+                return userAns === normalized || 
+                       userAns.replace(/\+c$/, '') === normalized.replace(/\+c$/, '') ||
+                       userAns.replace(/\+c$/, '') === normalized;
+            });
+            
+            const feedback = document.getElementById('feedback');
+            feedback.classList.remove('hidden');
+            
+            if (isCorrect) {
+                playSound('correct');
+                feedback.textContent = '✅ 正确！积分计算无误。';
+                feedback.className = 'mt-3 text-sm font-bold text-green-400';
+                
+                // 成功效果
+                for (let i = 0; i < 30; i++) {
+                    particles.push(new Particle(player.x, player.y, '#10b981'));
+                }
+                
+                setTimeout(() => gameOver(true), 1000);
+            } else {
+                playSound('wrong');
+                feedback.textContent = '❌ 答案不正确，请检查积分常数和计算过程。';
+                feedback.className = 'mt-3 text-sm font-bold text-red-400';
+                gameState.energy -= 10;
+                updateHUD();
+                
+                // 错误震动效果
+                document.getElementById('challengePanel').classList.add('animate-pulse');
+                setTimeout(() => {
+                    document.getElementById('challengePanel').classList.remove('animate-pulse');
+                }, 500);
+            }
+        }
+
+        function useHint() {
+            playSound('click');
+            gameState.score = Math.max(0, gameState.score - 10);
+            updateHUD();
+            document.getElementById('hint').classList.remove('text-yellow-300/80');
+            document.getElementById('hint').classList.add('text-yellow-300', 'font-bold');
+        }
+
+        function skipProblem() {
+            playSound('click');
+            gameOver(false);
+        }
+
+        function gameOver(success) {
+            clearInterval(gameState.timer);
+            gameState.isPlaying = false;
+            
+            const level = levels[gameState.currentLevel];
+            const resultScreen = document.getElementById('resultScreen');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            if (success) {
+                playSound('win');
+                resultIcon.textContent = '🎉';
+                resultTitle.textContent = '挑战成功！';
+                resultMessage.textContent = `你成功运用${level.technique}解决了${level.theme}问题！`;
+                
+                const timeBonus = gameState.timeLeft * 2;
+                const energyBonus = gameState.energy;
+                const totalScore = 100 + timeBonus + energyBonus;
+                
+                gameState.score += totalScore;
+                
+                // 解锁下一关
+                if (gameState.currentLevel < levels.length - 1 && 
+                    !gameState.unlockedLevels.includes(gameState.currentLevel + 1)) {
+                    gameState.unlockedLevels.push(gameState.currentLevel + 1);
+                }
+                
+                document.getElementById('resultScore').textContent = '+' + totalScore;
+                document.getElementById('resultTime').textContent = (60 - gameState.timeLeft) + 's';
+                document.getElementById('resultEnergy').textContent = gameState.energy + '%';
+            } else {
+                resultIcon.textContent = '💔';
+                resultTitle.textContent = '挑战失败';
+                resultMessage.textContent = '别灰心！再试一次，仔细检查积分步骤。';
+                document.getElementById('resultScore').textContent = '+0';
+                document.getElementById('resultTime').textContent = '0s';
+                document.getElementById('resultEnergy').textContent = '0%';
+            }
+            
+            resultScreen.classList.remove('hidden');
+            updateHUD();
+        }
+
+        function nextLevel() {
+            playSound('click');
+            document.getElementById('resultScreen').classList.add('hidden');
+            if (gameState.currentLevel < levels.length - 1) {
+                gameState.currentLevel++;
+                startLevel();
+            } else {
+                // 通关
+                alert('恭喜你！你已经完成了所有关卡的挑战，成为真正的积分大师！');
+                backToMenu();
+            }
+        }
+
+        function retryLevel() {
+            playSound('click');
+            document.getElementById('resultScreen').classList.add('hidden');
+            startLevel();
+        }
+
+        function backToMenu() {
+            playSound('click');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('challengePanel').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        // 启动游戏循环
+        requestAnimationFrame(gameLoop);
+
+        // 键盘支持
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('challengePanel').classList.contains('hidden')) {
+                checkAnswer();
+            }
+        });
+    </script>
+</body>
+</html>
